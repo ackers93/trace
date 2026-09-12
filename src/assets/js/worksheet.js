@@ -6,7 +6,7 @@
 const SCRIPTS = {
   manuscript: {
     label: "Manuscript",
-    family: '"Handlee", "Segoe Print", "Comic Sans MS", cursive',
+    family: '"Patrick Hand", "Segoe Print", "Comic Sans MS", cursive',
     className: "script-manuscript",
   },
   cursive: {
@@ -17,14 +17,18 @@ const SCRIPTS = {
 };
 
 const STYLES = {
-  solid: { label: "Solid", className: "style-solid", render: "text" },
-  outline: { label: "Outline", className: "style-outline", render: "svg" },
-  dotted: { label: "Dotted", className: "style-dotted", render: "svg" },
-  faded: { label: "Faded", className: "style-faded", render: "text" },
+  solid: { label: "Solid", className: "style-solid" },
+  outline: { label: "Outline", className: "style-outline" },
+  dotted: { label: "Dotted", className: "style-dotted" },
+  faded: { label: "Faded", className: "style-faded" },
 };
+
+const PLACEHOLDER = "Emma";
+const LINE_GAP = "    ";
 
 /** Injected so @page size tracks A4 / Letter for print. */
 let pageStyleEl = null;
+let measureCtx = null;
 
 function ensurePageStyle() {
   if (pageStyleEl) return pageStyleEl;
@@ -38,8 +42,6 @@ function setPrintPageSize(page) {
   const size = page === "letter" ? "letter" : "A4";
   ensurePageStyle().textContent = `@page { size: ${size}; margin: 0; }`;
 }
-
-const PLACEHOLDER = "Emma";
 
 const els = {
   name: document.getElementById("name-input"),
@@ -70,92 +72,7 @@ function getState() {
   };
 }
 
-const LINE_GAP = "   ";
-
-function createWordNode(text, styleKey) {
-  const style = STYLES[styleKey] || STYLES.dotted;
-  const wrap = document.createElement("div");
-  wrap.className = "worksheet-word";
-
-  if (style.render === "svg") {
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("class", "worksheet-word__svg");
-    svg.setAttribute("aria-hidden", "true");
-
-    const svgText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    svgText.setAttribute("x", "0");
-    svgText.setAttribute("y", "50%");
-    svgText.textContent = text;
-    svg.appendChild(svgText);
-    wrap.appendChild(svg);
-  } else {
-    const span = document.createElement("span");
-    span.className = "worksheet-word__text";
-    span.textContent = text;
-    wrap.appendChild(span);
-  }
-
-  return wrap;
-}
-
-function createRow(text, styleKey) {
-  const row = document.createElement("div");
-  row.className = "worksheet-row";
-
-  const guides = document.createElement("div");
-  guides.className = "worksheet-row__guides";
-  guides.setAttribute("aria-hidden", "true");
-  guides.appendChild(document.createElement("span"));
-  row.appendChild(guides);
-  row.appendChild(createWordNode(text, styleKey));
-  return row;
-}
-
-/** Intrinsic width of rendered line text (ignores the 100% row stretch). */
-function measureTextWidth(text, styleKey) {
-  const probe = createRow(text, styleKey);
-  probe.style.position = "absolute";
-  probe.style.visibility = "hidden";
-  probe.style.pointerEvents = "none";
-  probe.style.left = "0";
-  probe.style.top = "0";
-
-  const word = probe.querySelector(".worksheet-word");
-  if (word) word.style.width = "max-content";
-
-  els.lines.appendChild(probe);
-
-  let width = 0;
-  const svgText = word?.querySelector("text");
-  if (svgText && typeof svgText.getComputedTextLength === "function") {
-    width = svgText.getComputedTextLength();
-  } else if (word) {
-    width = word.getBoundingClientRect().width;
-  }
-
-  probe.remove();
-  return width;
-}
-
-/** How many times `text` fits across the line (with gaps), at least 1. */
-function repeatsAcrossLine(text, styleKey) {
-  const available = els.lines.clientWidth;
-  const one = measureTextWidth(text, styleKey);
-  if (!one || !available) return 1;
-
-  const two = measureTextWidth(`${text}${LINE_GAP}${text}`, styleKey);
-  const gap = Math.max(0, two - one * 2);
-  const unit = one + gap;
-
-  return Math.max(1, Math.floor((available + gap) / unit));
-}
-
-function lineText(text, styleKey) {
-  const count = repeatsAcrossLine(text, styleKey);
-  return Array.from({ length: count }, () => text).join(LINE_GAP);
-}
-
-function applyPageClasses(state) {
+function applyPageShell(state) {
   const script = SCRIPTS[state.script] || SCRIPTS.manuscript;
   const style = STYLES[state.style] || STYLES.dotted;
 
@@ -170,7 +87,146 @@ function applyPageClasses(state) {
     .join(" ");
 
   els.page.style.setProperty("--ws-font-size", `${state.size}px`);
-  els.page.style.setProperty("--ws-line-gap", `${Math.max(10, state.size * 0.28)}px`);
+  els.page.style.setProperty("--ws-line-gap", `${Math.max(16, state.size * 0.3)}px`);
+}
+
+function getMeasureCtx() {
+  if (measureCtx) return measureCtx;
+  const canvas = document.createElement("canvas");
+  measureCtx = canvas.getContext("2d");
+  return measureCtx;
+}
+
+/**
+ * Build a primary handwriting staff from canvas glyph metrics.
+ * top = capital top, mid = x-height, base = baseline, desc = descenders.
+ */
+function measureGuideMetrics(fontFamily, fontSize) {
+  const ctx = getMeasureCtx();
+  ctx.font = `${fontSize}px ${fontFamily}`;
+
+  const cap = ctx.measureText("H");
+  const ex = ctx.measureText("x");
+  const dee = ctx.measureText("g");
+
+  const capAscent = Math.max(fontSize * 0.55, cap.actualBoundingBoxAscent || fontSize * 0.75);
+  const xAscent = Math.max(fontSize * 0.3, ex.actualBoundingBoxAscent || capAscent * 0.55);
+  const descent = Math.max(fontSize * 0.2, dee.actualBoundingBoxDescent || fontSize * 0.28);
+
+  const pad = Math.round(fontSize * 0.2);
+  const top = pad;
+  const base = pad + capAscent;
+  // Mid sits at the top of lowercase letters.
+  let mid = base - xAscent;
+  // Keep mid clearly between top and baseline.
+  mid = Math.min(base - fontSize * 0.2, Math.max(top + fontSize * 0.12, mid));
+  const desc = base + descent;
+  const rowHeight = Math.ceil(desc + pad);
+
+  return { top, mid, base, desc, rowHeight, fontSize, fontFamily, pad };
+}
+
+function applyGuideMetrics(metrics) {
+  const s = els.page.style;
+  s.setProperty("--ws-row-height", `${metrics.rowHeight}px`);
+  s.setProperty("--ws-guide-top", `${metrics.top}px`);
+  s.setProperty("--ws-guide-mid", `${metrics.mid}px`);
+  s.setProperty("--ws-guide-base", `${metrics.base}px`);
+  s.setProperty("--ws-guide-desc", `${metrics.desc}px`);
+}
+
+function appendSvgText(svg, text, metrics) {
+  const svgText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  svgText.setAttribute("x", "0");
+  svgText.setAttribute("y", String(metrics.base));
+  svgText.setAttribute("dominant-baseline", "alphabetic");
+  svgText.setAttribute("font-size", String(metrics.fontSize));
+  svgText.setAttribute("font-family", metrics.fontFamily);
+  svgText.textContent = text;
+  svg.appendChild(svgText);
+  return svgText;
+}
+
+function createWordNode(text, metrics, styleKey) {
+  const wrap = document.createElement("div");
+  wrap.className = "worksheet-word";
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "worksheet-word__svg");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("height", String(metrics.rowHeight));
+  svg.style.height = `${metrics.rowHeight}px`;
+
+  if (styleKey === "dotted") {
+    // Hollow dotted outline — guide lines stay visible through letter interiors.
+    const svgText = appendSvgText(svg, text, metrics);
+    svgText.setAttribute("fill", "none");
+    svgText.setAttribute("stroke", "currentColor");
+    svgText.setAttribute("stroke-width", String(Math.max(1.2, metrics.fontSize * 0.032)));
+    svgText.setAttribute("stroke-linejoin", "round");
+    svgText.setAttribute("stroke-linecap", "round");
+    svgText.setAttribute(
+      "stroke-dasharray",
+      `${Math.max(1.1, metrics.fontSize * 0.028)} ${Math.max(2.2, metrics.fontSize * 0.07)}`,
+    );
+  } else {
+    appendSvgText(svg, text, metrics);
+  }
+
+  wrap.appendChild(svg);
+  return wrap;
+}
+
+function createRow(text, metrics, styleKey) {
+  const row = document.createElement("div");
+  row.className = "worksheet-row";
+
+  // Guides first in DOM, but painted above the letters via CSS z-index
+  // so ruled lines run through the practice text.
+  const guides = document.createElement("div");
+  guides.className = "worksheet-row__guides";
+  guides.setAttribute("aria-hidden", "true");
+
+  for (const kind of ["top", "mid", "base", "desc"]) {
+    const line = document.createElement("span");
+    line.className = `worksheet-row__guide worksheet-row__guide--${kind}`;
+    guides.appendChild(line);
+  }
+
+  row.appendChild(createWordNode(text, metrics, styleKey));
+  row.appendChild(guides);
+  return row;
+}
+
+function measureTextWidth(text, metrics, styleKey) {
+  const probe = createRow(text, metrics, styleKey);
+  probe.style.cssText = "position:absolute;left:-9999px;top:0;pointer-events:none";
+  const word = probe.querySelector(".worksheet-word");
+  if (word) word.style.width = "max-content";
+
+  els.lines.appendChild(probe);
+  const svgText = word?.querySelector("text");
+  const width =
+    svgText && typeof svgText.getComputedTextLength === "function"
+      ? svgText.getComputedTextLength()
+      : word?.getBoundingClientRect().width || 0;
+  probe.remove();
+  return width;
+}
+
+function repeatsAcrossLine(text, metrics, styleKey) {
+  const available = els.lines.clientWidth;
+  const one = measureTextWidth(text, metrics, styleKey);
+  if (!one || !available) return 1;
+
+  const two = measureTextWidth(`${text}${LINE_GAP}${text}`, metrics, styleKey);
+  const gap = Math.max(0, two - one * 2);
+  return Math.max(1, Math.floor((available + gap) / (one + gap)));
+}
+
+function lineText(text, metrics, styleKey) {
+  const count = repeatsAcrossLine(text, metrics, styleKey);
+  return Array.from({ length: count }, () => text).join(LINE_GAP);
 }
 
 function fitPreviewScale() {
@@ -187,23 +243,17 @@ function fitPreviewScale() {
   frame.style.minHeight = `${els.page.offsetHeight * scale + 8}px`;
 }
 
-function fillPage(state) {
+function fillPage(state, metrics) {
   els.lines.replaceChildren();
 
-  if (state.isPlaceholder) {
-    els.subtitle.textContent = "Enter a name to begin";
-  } else {
-    els.subtitle.textContent = state.text;
-  }
+  els.subtitle.textContent = state.isPlaceholder ? "Enter a name to begin" : state.text;
 
-  const filled = lineText(state.text, state.style);
-
-  // Probe one row to measure height, then fill.
-  const probe = createRow(filled, state.style);
+  const filled = lineText(state.text, metrics, state.style);
+  const probe = createRow(filled, metrics, state.style);
   els.lines.appendChild(probe);
 
   const available = els.lines.clientHeight;
-  const rowHeight = probe.getBoundingClientRect().height;
+  const rowHeight = probe.getBoundingClientRect().height || metrics.rowHeight;
   const styles = getComputedStyle(els.lines);
   const gap = parseFloat(styles.rowGap || styles.gap || "0") || 0;
 
@@ -214,24 +264,42 @@ function fillPage(state) {
 
   els.lines.replaceChildren();
   for (let i = 0; i < count; i += 1) {
-    els.lines.appendChild(createRow(filled, state.style));
+    els.lines.appendChild(createRow(filled, metrics, state.style));
   }
 }
 
-function render() {
+async function ensureScriptFont(state) {
+  const script = SCRIPTS[state.script] || SCRIPTS.manuscript;
+  if (!document.fonts?.load) return;
+  try {
+    await document.fonts.load(`${state.size}px ${script.family}`);
+    await document.fonts.ready;
+  } catch {
+    /* keep going with fallbacks */
+  }
+}
+
+async function render() {
   if (!els.page || !els.lines) return;
 
   const state = getState();
   if (els.sizeValue) els.sizeValue.textContent = String(state.size);
 
-  applyPageClasses(state);
+  const script = SCRIPTS[state.script] || SCRIPTS.manuscript;
+  applyPageShell(state);
   setPrintPageSize(state.page);
-  fillPage(state);
+  await ensureScriptFont(state);
+
+  const metrics = measureGuideMetrics(script.family, state.size);
+  applyGuideMetrics(metrics);
+  fillPage(state, metrics);
   fitPreviewScale();
 }
 
 function bind() {
-  const rerender = () => render();
+  const rerender = () => {
+    render();
+  };
 
   els.name?.addEventListener("input", rerender);
   els.size?.addEventListener("input", rerender);
@@ -241,34 +309,22 @@ function bind() {
     input.addEventListener("change", rerender);
   });
 
-  els.print?.addEventListener("click", () => {
-    window.print();
-  });
+  els.print?.addEventListener("click", () => window.print());
+  window.addEventListener("resize", () => fitPreviewScale());
 
-  window.addEventListener("resize", () => {
-    fitPreviewScale();
-  });
-
-  // Re-measure after fonts load so row count stays accurate.
   if (document.fonts?.ready) {
     document.fonts.ready.then(() => render());
   }
 
   const printMq = window.matchMedia("print");
-  const syncPrintTransform = () => {
-    if (printMq.matches) {
-      els.page.style.transform = "none";
-    } else {
-      fitPreviewScale();
-    }
-  };
-  printMq.addEventListener?.("change", syncPrintTransform);
+  printMq.addEventListener?.("change", () => {
+    if (printMq.matches) els.page.style.transform = "none";
+    else fitPreviewScale();
+  });
   window.addEventListener("beforeprint", () => {
     els.page.style.transform = "none";
   });
-  window.addEventListener("afterprint", () => {
-    fitPreviewScale();
-  });
+  window.addEventListener("afterprint", () => fitPreviewScale());
 }
 
 bind();

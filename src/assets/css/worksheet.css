@@ -1,13 +1,19 @@
 :root {
   --ws-font-size: 48px;
   --ws-line-gap: 0.55em;
+  --ws-row-height: calc(var(--ws-font-size) * 1.7);
+  --ws-guide-top: 0.18em;
+  --ws-guide-mid: 0.68em;
+  --ws-guide-base: 1.18em;
+  --ws-guide-desc: 1.5em;
   --ws-guide: #9eb8c9;
-  --ws-guide-mid: #c9a0a8;
+  --ws-guide-mid-color: #c9a0a8;
   --ws-ink: #1c2a33;
   --ws-faded: #b7c0c6;
-  --ws-stroke: 0.045em;
+  --ws-stroke: 0.035em;
+  --ws-dot: 0.07em;
   --ws-page-pad: 0.5in;
-  --font-manuscript: "Handlee", "Segoe Print", "Comic Sans MS", cursive;
+  --font-manuscript: "Patrick Hand", "Segoe Print", "Comic Sans MS", cursive;
   --font-cursive: "Dancing Script", "Segoe Script", "Brush Script MT", cursive;
 }
 
@@ -70,39 +76,44 @@
 .worksheet-row {
   position: relative;
   flex: 0 0 auto;
-  min-height: calc(var(--ws-font-size) * 1.35);
+  height: var(--ws-row-height);
+  min-height: var(--ws-row-height);
   display: flex;
-  align-items: center;
+  align-items: stretch;
 }
 
 .worksheet-row__guides {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* Draw guides on top so lines run through the letters */
+  z-index: 2;
 }
 
-.worksheet-row__guides::before,
-.worksheet-row__guides::after,
-.worksheet-row__guides span {
-  content: "";
+.worksheet-row__guide {
   position: absolute;
   left: 0;
   right: 0;
-  border-top: 1px solid var(--ws-guide);
+  border-top: 1.5px solid var(--ws-guide);
 }
 
-.worksheet-row__guides::before {
-  top: 12%;
+.worksheet-row__guide--top {
+  top: var(--ws-guide-top);
 }
 
-.worksheet-row__guides span {
-  top: 50%;
-  border-top-color: var(--ws-guide-mid);
+.worksheet-row__guide--mid {
+  top: var(--ws-guide-mid);
+  border-top-color: var(--ws-guide-mid-color);
   border-top-style: dashed;
+  border-top-width: 1.5px;
 }
 
-.worksheet-row__guides::after {
-  bottom: 12%;
+.worksheet-row__guide--base {
+  top: var(--ws-guide-base);
+}
+
+.worksheet-row__guide--desc {
+  top: var(--ws-guide-desc);
 }
 
 .worksheet-page:not(.show-guides) .worksheet-row__guides {
@@ -113,93 +124,61 @@
   position: relative;
   z-index: 1;
   width: 100%;
+  height: var(--ws-row-height);
   font-size: var(--ws-font-size);
-  line-height: 1.2;
+  line-height: 1;
   white-space: nowrap;
   overflow: hidden;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  color: var(--ws-ink);
 }
 
-.script-manuscript .worksheet-word {
+.script-manuscript .worksheet-word,
+.script-manuscript .worksheet-word__svg text {
   font-family: var(--font-manuscript);
 }
 
-.script-cursive .worksheet-word {
+.script-cursive .worksheet-word,
+.script-cursive .worksheet-word__svg text {
   font-family: var(--font-cursive);
-  letter-spacing: 0.01em;
-}
-
-.worksheet-word__text {
-  display: block;
+  letter-spacing: 0.02em;
 }
 
 .worksheet-word__svg {
   display: block;
   width: 100%;
-  height: calc(var(--ws-font-size) * 1.25);
+  height: var(--ws-row-height);
   overflow: visible;
 }
 
 .worksheet-word__svg text {
-  font-size: var(--ws-font-size);
-  dominant-baseline: middle;
-}
-
-.script-manuscript .worksheet-word__svg text {
-  font-family: var(--font-manuscript);
-}
-
-.script-cursive .worksheet-word__svg text {
-  font-family: var(--font-cursive);
+  dominant-baseline: alphabetic;
 }
 
 /* Solid */
-.style-solid .worksheet-word__text {
-  color: var(--ws-ink);
-}
-
 .style-solid .worksheet-word__svg text {
   fill: var(--ws-ink);
   stroke: none;
 }
 
-/* Faded */
-.style-faded .worksheet-word__text {
-  color: var(--ws-faded);
-}
-
+/* Faded — soft filled letters for light tracing */
 .style-faded .worksheet-word__svg text {
   fill: var(--ws-faded);
   stroke: none;
 }
 
-/* Outline */
-.style-outline .worksheet-word__text {
-  color: transparent;
-  -webkit-text-stroke: var(--ws-stroke) var(--ws-ink);
-  paint-order: stroke fill;
-}
-
+/* Outline — clean hollow letters */
 .style-outline .worksheet-word__svg text {
   fill: none;
   stroke: var(--ws-ink);
   stroke-width: var(--ws-stroke);
   stroke-linejoin: round;
+  stroke-linecap: round;
 }
 
-/* Dotted */
-.style-dotted .worksheet-word__text {
-  color: transparent;
-  -webkit-text-stroke: var(--ws-stroke) var(--ws-ink);
-}
-
+/* Dotted — thin dashed stroke set in JS; keep CSS from overriding fill */
 .style-dotted .worksheet-word__svg text {
   fill: none;
-  stroke: var(--ws-ink);
-  stroke-width: var(--ws-stroke);
-  stroke-linejoin: round;
-  stroke-linecap: round;
-  stroke-dasharray: 0.09em 0.14em;
 }
 
 .worksheet-empty {
