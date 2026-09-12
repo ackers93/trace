@@ -224,6 +224,7 @@
     display: block;
     max-width: 100%;
     overflow: hidden;
+    contain: paint;
     flex: 0 0 auto;
   }
 

@@ -26,8 +26,9 @@ html {
   font-family: var(--font-ui);
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
-  /* Explicit y + hidden x avoids the visible/hidden → auto overflow quirk */
-  overflow-x: hidden;
+  width: 100%;
+  /* clip (not hidden) prevents sideways rubber-banding when nested content is wide */
+  overflow-x: clip;
   overflow-y: auto;
   overscroll-behavior-x: none;
 }
@@ -35,9 +36,11 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   overscroll-behavior-x: none;
+  touch-action: pan-y;
   background:
     radial-gradient(ellipse 90% 55% at 10% -10%, rgba(120, 190, 170, 0.35), transparent 55%),
     radial-gradient(ellipse 70% 45% at 95% 5%, rgba(90, 150, 180, 0.22), transparent 50%),
@@ -261,7 +264,7 @@ body {
   display: grid;
   gap: 1.5rem;
   min-width: 0;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 @media (min-width: 900px) {
@@ -510,7 +513,7 @@ body {
 }
 
 .preview__frame {
-  overflow-x: hidden;
+  overflow-x: clip;
   overflow-y: auto;
   max-width: 100%;
   padding: 0.5rem;
@@ -524,4 +527,38 @@ body {
       rgba(42, 143, 122, 0.04) 10px,
       rgba(42, 143, 122, 0.04) 11px
     );
+}
+
+.site-footer {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0.25rem 0 0.5rem;
+  overflow-x: clip;
+}
+
+.bmc-button {
+  display: inline-flex;
+  max-width: 100%;
+  line-height: 0;
+  border-radius: 12px;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.bmc-button img {
+  display: block;
+  width: min(217px, 100%);
+  height: auto;
+}
+
+.bmc-button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+
+.bmc-button:focus-visible {
+  outline: 2px solid rgba(42, 143, 122, 0.5);
+  outline-offset: 4px;
 }
