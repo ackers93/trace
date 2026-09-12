@@ -70,6 +70,8 @@ function getState() {
   };
 }
 
+const LINE_GAP = "   ";
+
 function createWordNode(text, styleKey) {
   const style = STYLES[styleKey] || STYLES.dotted;
   const wrap = document.createElement("div");
@@ -107,6 +109,50 @@ function createRow(text, styleKey) {
   row.appendChild(guides);
   row.appendChild(createWordNode(text, styleKey));
   return row;
+}
+
+/** Intrinsic width of rendered line text (ignores the 100% row stretch). */
+function measureTextWidth(text, styleKey) {
+  const probe = createRow(text, styleKey);
+  probe.style.position = "absolute";
+  probe.style.visibility = "hidden";
+  probe.style.pointerEvents = "none";
+  probe.style.left = "0";
+  probe.style.top = "0";
+
+  const word = probe.querySelector(".worksheet-word");
+  if (word) word.style.width = "max-content";
+
+  els.lines.appendChild(probe);
+
+  let width = 0;
+  const svgText = word?.querySelector("text");
+  if (svgText && typeof svgText.getComputedTextLength === "function") {
+    width = svgText.getComputedTextLength();
+  } else if (word) {
+    width = word.getBoundingClientRect().width;
+  }
+
+  probe.remove();
+  return width;
+}
+
+/** How many times `text` fits across the line (with gaps), at least 1. */
+function repeatsAcrossLine(text, styleKey) {
+  const available = els.lines.clientWidth;
+  const one = measureTextWidth(text, styleKey);
+  if (!one || !available) return 1;
+
+  const two = measureTextWidth(`${text}${LINE_GAP}${text}`, styleKey);
+  const gap = Math.max(0, two - one * 2);
+  const unit = one + gap;
+
+  return Math.max(1, Math.floor((available + gap) / unit));
+}
+
+function lineText(text, styleKey) {
+  const count = repeatsAcrossLine(text, styleKey);
+  return Array.from({ length: count }, () => text).join(LINE_GAP);
 }
 
 function applyPageClasses(state) {
@@ -150,8 +196,10 @@ function fillPage(state) {
     els.subtitle.textContent = state.text;
   }
 
+  const filled = lineText(state.text, state.style);
+
   // Probe one row to measure height, then fill.
-  const probe = createRow(state.text, state.style);
+  const probe = createRow(filled, state.style);
   els.lines.appendChild(probe);
 
   const available = els.lines.clientHeight;
@@ -166,7 +214,7 @@ function fillPage(state) {
 
   els.lines.replaceChildren();
   for (let i = 0; i < count; i += 1) {
-    els.lines.appendChild(createRow(state.text, state.style));
+    els.lines.appendChild(createRow(filled, state.style));
   }
 }
 
