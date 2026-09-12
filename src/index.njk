@@ -14,18 +14,11 @@ description: Make printable tracing worksheets for your child’s name. Choose s
 <main class="tool">
   <section class="controls no-print" aria-label="Worksheet options">
     <div class="controls__grid">
-      <label class="field field--wide">
-        <span class="field__label">Name or word</span>
-        <input
-          type="text"
-          id="name-input"
-          class="field__input"
-          placeholder="Emma"
-          autocomplete="off"
-          spellcheck="false"
-          maxlength="40"
-        >
-      </label>
+      <div class="field field--wide">
+        <span class="field__label">Pages</span>
+        <p class="field__help">Same layout on every page — change the word for each one.</p>
+        <div id="pages-list" class="pages-list" aria-label="Worksheet pages"></div>
+      </div>
 
       <fieldset class="field">
         <legend class="field__label">Script</legend>
@@ -41,31 +34,11 @@ description: Make printable tracing worksheets for your child’s name. Choose s
         </div>
       </fieldset>
 
-      <fieldset class="field">
-        <legend class="field__label">Style</legend>
-        <div class="segmented segmented--wrap" role="radiogroup" aria-label="Style">
-          <label class="segmented__option">
-            <input type="radio" name="style" value="solid">
-            <span>Solid</span>
-          </label>
-          <label class="segmented__option">
-            <input type="radio" name="style" value="outline">
-            <span>Outline</span>
-          </label>
-          <label class="segmented__option">
-            <input type="radio" name="style" value="dotted" checked>
-            <span>Dotted</span>
-          </label>
-          <label class="segmented__option">
-            <input type="radio" name="style" value="faded-dots">
-            <span>Faded dots</span>
-          </label>
-          <label class="segmented__option">
-            <input type="radio" name="style" value="faded">
-            <span>Faded</span>
-          </label>
-        </div>
-      </fieldset>
+      <div class="field field--wide">
+        <span class="field__label">Line pattern</span>
+        <p class="field__help">Styles repeat down the page. Use Guides only for blank practice lines.</p>
+        <div id="line-pattern" class="line-pattern" aria-label="Line pattern"></div>
+      </div>
 
       <label class="field">
         <span class="field__label">Size <span id="size-value" class="field__hint">48</span></span>
@@ -107,18 +80,6 @@ description: Make printable tracing worksheets for your child’s name. Choose s
 
   <section class="preview" aria-label="Worksheet preview">
     <p class="preview__label no-print">Preview</p>
-    <div class="preview__frame">
-      <div
-        id="worksheet-page"
-        class="worksheet-page page-a4 script-manuscript style-dotted"
-        aria-live="polite"
-      >
-        <div class="worksheet-page__header">
-          <span class="worksheet-page__title">Trace</span>
-          <span id="worksheet-subtitle" class="worksheet-page__subtitle"></span>
-        </div>
-        <div id="worksheet-lines" class="worksheet-page__lines"></div>
-      </div>
-    </div>
+    <div id="worksheet-pages" class="preview__frame"></div>
   </section>
 </main>

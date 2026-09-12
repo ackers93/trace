@@ -116,7 +116,7 @@
   top: var(--ws-guide-desc);
 }
 
-.worksheet-page:not(.show-guides) .worksheet-row__guides {
+.worksheet-page:not(.show-guides) .worksheet-row:not(.style-guides-only) .worksheet-row__guides {
   display: none;
 }
 
@@ -145,20 +145,20 @@
 }
 
 /* Dotted — real dotted glyphs from Edu AU VIC WA NT Dots */
-.style-dotted .worksheet-word,
-.style-dotted .worksheet-word__svg text,
-.style-faded-dots .worksheet-word,
-.style-faded-dots .worksheet-word__svg text {
+.worksheet-row.style-dotted .worksheet-word,
+.worksheet-row.style-dotted .worksheet-word__svg text,
+.worksheet-row.style-faded-dots .worksheet-word,
+.worksheet-row.style-faded-dots .worksheet-word__svg text {
   font-family: var(--font-dotted);
   letter-spacing: 0.03em;
 }
 
-.style-dotted .worksheet-word__svg text {
+.worksheet-row.style-dotted .worksheet-word__svg text {
   fill: var(--ws-ink);
   stroke: none;
 }
 
-.style-faded-dots .worksheet-word__svg text {
+.worksheet-row.style-faded-dots .worksheet-word__svg text {
   fill: var(--ws-faded);
   stroke: none;
 }
@@ -175,24 +175,28 @@
 }
 
 /* Solid */
-.style-solid .worksheet-word__svg text {
+.worksheet-row.style-solid .worksheet-word__svg text {
   fill: var(--ws-ink);
   stroke: none;
 }
 
 /* Faded — soft filled letters for light tracing */
-.style-faded .worksheet-word__svg text {
+.worksheet-row.style-faded .worksheet-word__svg text {
   fill: var(--ws-faded);
   stroke: none;
 }
 
 /* Outline — clean hollow letters */
-.style-outline .worksheet-word__svg text {
+.worksheet-row.style-outline .worksheet-word__svg text {
   fill: none;
   stroke: var(--ws-ink);
   stroke-width: var(--ws-stroke);
   stroke-linejoin: round;
   stroke-linecap: round;
+}
+
+.worksheet-row.style-guides-only .worksheet-word {
+  display: none;
 }
 
 .worksheet-empty {

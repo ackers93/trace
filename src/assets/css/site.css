@@ -133,6 +133,68 @@ body {
   color: var(--accent);
 }
 
+.field__help {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  line-height: 1.35;
+}
+
+.line-pattern {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.line-pattern__row {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.line-pattern__index {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.line-pattern__select {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.95rem;
+}
+
+.line-pattern__actions {
+  margin-top: 0.15rem;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn--ghost:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+
+.btn--ghost:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn--ghost:focus-visible {
+  outline: 2px solid rgba(42, 143, 122, 0.45);
+  outline-offset: 2px;
+}
+
 .field__input {
   width: 100%;
   border: 1px solid var(--line);

@@ -25,14 +25,19 @@ const STYLES = {
   dotted: { label: "Dotted", className: "style-dotted" },
   "faded-dots": { label: "Faded dots", className: "style-faded-dots" },
   faded: { label: "Faded", className: "style-faded" },
+  guides: { label: "Guides only", className: "style-guides-only" },
 };
 
+const DOTTED_STYLES = new Set(["dotted", "faded-dots"]);
 const PLACEHOLDER = "Emma";
 const LINE_GAP = "    ";
+const DEFAULT_PATTERN = ["solid", "faded", "faded", "dotted", "faded-dots"];
 
 /** Injected so @page size tracks A4 / Letter for print. */
 let pageStyleEl = null;
 let measureCtx = null;
+/** @type {string[]} */
+let linePattern = [...DEFAULT_PATTERN];
 
 function ensurePageStyle() {
   if (pageStyleEl) return pageStyleEl;
@@ -52,6 +57,7 @@ const els = {
   size: document.getElementById("size-input"),
   sizeValue: document.getElementById("size-value"),
   guides: document.getElementById("guides-input"),
+  linePattern: document.getElementById("line-pattern"),
   page: document.getElementById("worksheet-page"),
   lines: document.getElementById("worksheet-lines"),
   subtitle: document.getElementById("worksheet-subtitle"),
@@ -63,34 +69,41 @@ function selectedValue(name) {
   return input ? input.value : null;
 }
 
+function normalizeStyle(key) {
+  return STYLES[key] ? key : "dotted";
+}
+
 function getState() {
   const raw = (els.name?.value ?? "").trim();
+  const pattern = linePattern.length ? linePattern.map(normalizeStyle) : ["dotted"];
   return {
     text: raw || PLACEHOLDER,
     isPlaceholder: !raw,
     script: selectedValue("script") || "manuscript",
-    style: selectedValue("style") || "dotted",
+    pattern,
     page: selectedValue("page") || "a4",
     size: Number(els.size?.value || 48),
     guides: Boolean(els.guides?.checked),
   };
 }
 
-function activeFontFamily(state) {
-  if (state.style === "dotted" || state.style === "faded-dots") return DOTTED_FAMILY;
+function scriptFontFamily(state) {
   const script = SCRIPTS[state.script] || SCRIPTS.manuscript;
   return script.family;
 }
 
+function fontFamilyForStyle(state, styleKey) {
+  if (DOTTED_STYLES.has(styleKey)) return DOTTED_FAMILY;
+  return scriptFontFamily(state);
+}
+
 function applyPageShell(state) {
   const script = SCRIPTS[state.script] || SCRIPTS.manuscript;
-  const style = STYLES[state.style] || STYLES.dotted;
 
   els.page.className = [
     "worksheet-page",
     state.page === "letter" ? "page-letter" : "page-a4",
     script.className,
-    style.className,
     state.guides ? "show-guides" : "",
   ]
     .filter(Boolean)
@@ -171,9 +184,10 @@ function createWordNode(text, metrics) {
   return wrap;
 }
 
-function createRow(text, metrics) {
+function createRow(text, metrics, styleKey) {
+  const style = STYLES[styleKey] || STYLES.dotted;
   const row = document.createElement("div");
-  row.className = "worksheet-row";
+  row.className = ["worksheet-row", style.className].filter(Boolean).join(" ");
 
   const guides = document.createElement("div");
   guides.className = "worksheet-row__guides";
@@ -186,12 +200,16 @@ function createRow(text, metrics) {
   }
 
   row.appendChild(guides);
-  row.appendChild(createWordNode(text, metrics));
+
+  if (styleKey !== "guides") {
+    row.appendChild(createWordNode(text, metrics));
+  }
+
   return row;
 }
 
 function measureTextWidth(text, metrics) {
-  const probe = createRow(text, metrics);
+  const probe = createRow(text, metrics, "solid");
   probe.style.cssText = "position:absolute;left:-9999px;top:0;pointer-events:none";
   const word = probe.querySelector(".worksheet-word");
   if (word) word.style.width = "max-content";
@@ -235,17 +253,33 @@ function fitPreviewScale() {
   frame.style.minHeight = `${els.page.offsetHeight * scale + 8}px`;
 }
 
-function fillPage(state, metrics) {
+function metricsForStyle(state, styleKey, baseMetrics) {
+  const family = fontFamilyForStyle(state, styleKey);
+  if (family === baseMetrics.fontFamily) return baseMetrics;
+  return { ...baseMetrics, fontFamily: family };
+}
+
+function fillPage(state, baseMetrics) {
   els.lines.replaceChildren();
 
   els.subtitle.textContent = state.isPlaceholder ? "Enter a name to begin" : state.text;
 
-  const filled = lineText(state.text, metrics);
-  const probe = createRow(filled, metrics);
+  const pattern = state.pattern;
+  const textByStyle = new Map();
+  for (const styleKey of pattern) {
+    if (styleKey === "guides" || textByStyle.has(styleKey)) continue;
+    const metrics = metricsForStyle(state, styleKey, baseMetrics);
+    textByStyle.set(styleKey, lineText(state.text, metrics));
+  }
+
+  const probeStyle = pattern.find((key) => key !== "guides") || "solid";
+  const probeMetrics = metricsForStyle(state, probeStyle, baseMetrics);
+  const probeText = textByStyle.get(probeStyle) || state.text;
+  const probe = createRow(probeText, probeMetrics, probeStyle);
   els.lines.appendChild(probe);
 
   const available = els.lines.clientHeight;
-  const rowHeight = probe.getBoundingClientRect().height || metrics.rowHeight;
+  const rowHeight = probe.getBoundingClientRect().height || baseMetrics.rowHeight;
   const styles = getComputedStyle(els.lines);
   const gap = parseFloat(styles.rowGap || styles.gap || "0") || 0;
 
@@ -256,19 +290,90 @@ function fillPage(state, metrics) {
 
   els.lines.replaceChildren();
   for (let i = 0; i < count; i += 1) {
-    els.lines.appendChild(createRow(filled, metrics));
+    const styleKey = pattern[i % pattern.length];
+    const metrics = metricsForStyle(state, styleKey, baseMetrics);
+    const filled = styleKey === "guides" ? "" : textByStyle.get(styleKey) || state.text;
+    els.lines.appendChild(createRow(filled, metrics, styleKey));
   }
 }
 
 async function ensureScriptFont(state) {
-  const family = activeFontFamily(state);
   if (!document.fonts?.load) return;
+  const families = new Set([scriptFontFamily(state)]);
+  if (state.pattern.some((key) => DOTTED_STYLES.has(key))) {
+    families.add(DOTTED_FAMILY);
+  }
   try {
-    await document.fonts.load(`${state.size}px ${family}`);
+    await Promise.all([...families].map((family) => document.fonts.load(`${state.size}px ${family}`)));
     await document.fonts.ready;
   } catch {
     /* keep going with fallbacks */
   }
+}
+
+function styleOptionsHtml(selected) {
+  return Object.entries(STYLES)
+    .map(
+      ([value, meta]) =>
+        `<option value="${value}"${value === selected ? " selected" : ""}>${meta.label}</option>`,
+    )
+    .join("");
+}
+
+function renderLinePatternEditor() {
+  if (!els.linePattern) return;
+
+  els.linePattern.replaceChildren();
+
+  linePattern.forEach((styleKey, index) => {
+    const row = document.createElement("div");
+    row.className = "line-pattern__row";
+
+    const label = document.createElement("span");
+    label.className = "line-pattern__index";
+    label.textContent = String(index + 1);
+
+    const select = document.createElement("select");
+    select.className = "field__input line-pattern__select";
+    select.setAttribute("aria-label", `Line ${index + 1} style`);
+    select.innerHTML = styleOptionsHtml(normalizeStyle(styleKey));
+    select.addEventListener("change", () => {
+      linePattern[index] = normalizeStyle(select.value);
+      render();
+    });
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "btn btn--ghost line-pattern__remove";
+    remove.textContent = "Remove";
+    remove.disabled = linePattern.length <= 1;
+    remove.addEventListener("click", () => {
+      if (linePattern.length <= 1) return;
+      linePattern.splice(index, 1);
+      renderLinePatternEditor();
+      render();
+    });
+
+    row.append(label, select, remove);
+    els.linePattern.appendChild(row);
+  });
+
+  const actions = document.createElement("div");
+  actions.className = "line-pattern__actions";
+
+  const add = document.createElement("button");
+  add.type = "button";
+  add.className = "btn btn--ghost";
+  add.textContent = "Add line";
+  add.addEventListener("click", () => {
+    const last = linePattern[linePattern.length - 1] || "dotted";
+    linePattern.push(last);
+    renderLinePatternEditor();
+    render();
+  });
+
+  actions.appendChild(add);
+  els.linePattern.appendChild(actions);
 }
 
 async function render() {
@@ -281,7 +386,8 @@ async function render() {
   setPrintPageSize(state.page);
   await ensureScriptFont(state);
 
-  const metrics = measureGuideMetrics(activeFontFamily(state), state.size);
+  // Guide geometry stays on the script face so mixed styles share one staff height.
+  const metrics = measureGuideMetrics(scriptFontFamily(state), state.size);
   applyGuideMetrics(metrics);
   fillPage(state, metrics);
   fitPreviewScale();
@@ -296,7 +402,7 @@ function bind() {
   els.size?.addEventListener("input", rerender);
   els.guides?.addEventListener("change", rerender);
 
-  document.querySelectorAll('input[name="script"], input[name="style"], input[name="page"]').forEach((input) => {
+  document.querySelectorAll('input[name="script"], input[name="page"]').forEach((input) => {
     input.addEventListener("change", rerender);
   });
 
@@ -321,6 +427,7 @@ function bind() {
   window.addEventListener("afterprint", () => fitPreviewScale());
 }
 
+renderLinePatternEditor();
 bind();
 render();
 
