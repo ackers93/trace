@@ -211,9 +211,16 @@ function createRow(text, metrics, styleKey) {
 
 function measureTextWidth(hostLines, text, metrics) {
   const probe = createRow(text, metrics, "solid");
-  probe.style.cssText = "position:absolute;left:-9999px;top:0;pointer-events:none";
+  // Keep the probe in-flow but invisible so it never expands document scrollports.
+  probe.style.cssText =
+    "position:absolute;left:0;top:0;visibility:hidden;pointer-events:none;width:max-content";
   const word = probe.querySelector(".worksheet-word");
   if (word) word.style.width = "max-content";
+
+  const prevPosition = hostLines.style.position;
+  if (getComputedStyle(hostLines).position === "static") {
+    hostLines.style.position = "relative";
+  }
 
   hostLines.appendChild(probe);
   const svgText = word?.querySelector("text");
@@ -222,6 +229,7 @@ function measureTextWidth(hostLines, text, metrics) {
       ? svgText.getComputedTextLength()
       : word?.getBoundingClientRect().width || 0;
   probe.remove();
+  hostLines.style.position = prevPosition;
   return width;
 }
 
@@ -247,39 +255,34 @@ function fitPreviewScale() {
   const pages = [...frame.querySelectorAll(".worksheet-page")];
   if (!pages.length) return;
 
+  const available = Math.max(0, frame.clientWidth - 8);
+
   pages.forEach((page) => {
+    const shell = ensurePageScaleShell(page);
+
+    // Natural paper size (absolute positioning keeps this out of document flow)
     page.style.transform = "none";
-    const shell = page.parentElement;
-    if (shell?.classList.contains("worksheet-page-scale")) {
-      shell.style.width = "";
-      shell.style.height = "";
-    }
-  });
-
-  const pageWidth = pages[0].offsetWidth;
-  const available = frame.clientWidth - 8;
-  if (!pageWidth || available <= 0) return;
-
-  const scale = Math.min(1, available / pageWidth);
-
-  pages.forEach((page) => {
-    let shell = page.parentElement;
-    if (!shell?.classList.contains("worksheet-page-scale")) {
-      shell = document.createElement("div");
-      shell.className = "worksheet-page-scale";
-      page.replaceWith(shell);
-      shell.appendChild(page);
-    }
-
     const width = page.offsetWidth;
     const height = page.offsetHeight;
-    page.style.transform = scale < 0.999 ? `scale(${scale})` : "none";
-    page.style.transformOrigin = "top center";
+    if (!width || !height) return;
+
+    const scale = available > 0 ? Math.min(1, available / width) : 1;
     shell.style.width = `${width * scale}px`;
     shell.style.height = `${height * scale}px`;
+    page.style.transformOrigin = "top left";
+    page.style.transform = scale < 0.999 ? `scale(${scale})` : "none";
   });
+}
 
-  frame.style.minHeight = "";
+function ensurePageScaleShell(page) {
+  let shell = page.parentElement;
+  if (!shell?.classList.contains("worksheet-page-scale")) {
+    shell = document.createElement("div");
+    shell.className = "worksheet-page-scale";
+    page.replaceWith(shell);
+    shell.appendChild(page);
+  }
+  return shell;
 }
 
 function metricsForStyle(state, styleKey, baseMetrics) {
@@ -531,7 +534,11 @@ async function render() {
     const { page, subtitle, lines } = createPageElement();
     applyPageShell(page, state);
     applyGuideMetrics(page, metrics);
-    els.pages.appendChild(page);
+    // Wrap before insert so the paper’s mm/in width never widens the layout.
+    const shell = document.createElement("div");
+    shell.className = "worksheet-page-scale";
+    shell.appendChild(page);
+    els.pages.appendChild(shell);
     fillPage(page, lines, subtitle, state, metrics, word);
   });
 
@@ -561,6 +568,9 @@ function bind() {
   const preparePrint = () => {
     els.pages?.querySelectorAll(".worksheet-page").forEach((page) => {
       page.style.transform = "none";
+      page.style.position = "";
+      page.style.left = "";
+      page.style.top = "";
     });
     els.pages?.querySelectorAll(".worksheet-page-scale").forEach((shell) => {
       shell.style.width = "";

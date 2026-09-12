@@ -26,11 +26,18 @@ html {
   font-family: var(--font-ui);
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
+  /* Explicit y + hidden x avoids the visible/hidden → auto overflow quirk */
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-x: none;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
   background:
     radial-gradient(ellipse 90% 55% at 10% -10%, rgba(120, 190, 170, 0.35), transparent 55%),
     radial-gradient(ellipse 70% 45% at 95% 5%, rgba(90, 150, 180, 0.22), transparent 50%),
@@ -67,14 +74,17 @@ body {
 
 .tool {
   width: min(1120px, calc(100% - 2rem));
+  max-width: 100%;
   margin: 0 auto 3rem;
   display: grid;
   gap: 1.5rem;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 @media (min-width: 900px) {
   .tool {
-    grid-template-columns: minmax(280px, 340px) 1fr;
+    grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
     align-items: start;
   }
 }
@@ -302,6 +312,12 @@ body {
   outline-offset: 3px;
 }
 
+.preview {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
 .preview__label {
   margin: 0 0 0.65rem;
   font-size: 0.78rem;
@@ -312,7 +328,9 @@ body {
 }
 
 .preview__frame {
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-width: 100%;
   padding: 0.5rem;
   border-radius: var(--radius);
   background:

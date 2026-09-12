@@ -215,14 +215,23 @@
     gap: 1rem;
   }
 
+  /*
+   * Shell owns layout size. The real page is position:absolute inside so its
+   * paper width (210mm / 8.5in) never widens the document or preview column.
+   */
   .worksheet-page-scale {
-    display: flex;
-    justify-content: center;
+    position: relative;
+    display: block;
+    max-width: 100%;
     overflow: hidden;
+    flex: 0 0 auto;
   }
 
-  .worksheet-page {
-    max-width: 100%;
+  .worksheet-page-scale .worksheet-page {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
   }
 }
 
@@ -264,12 +273,16 @@
 
   .worksheet-page-scale {
     display: block !important;
+    position: static !important;
     width: auto !important;
     height: auto !important;
     overflow: visible !important;
   }
 
   .worksheet-page {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
     box-shadow: none !important;
     margin: 0 !important;
     transform: none !important;
