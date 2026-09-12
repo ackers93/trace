@@ -537,16 +537,62 @@ body {
 
 .site-footer {
   grid-column: 1 / -1;
-  display: flex;
+  display: grid;
+  justify-items: center;
   justify-content: center;
+  gap: 0.75rem;
   max-width: 100%;
   min-width: 0;
-  padding: 0.25rem 0 0.5rem;
+  margin-top: 0.5rem;
+  padding: 1.5rem 0.5rem 1.75rem;
+  text-align: center;
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.site-footer__text {
+  margin: 0;
+  max-width: 34rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+.site-footer__text + .site-footer__text {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--ink-soft) 88%, var(--paper));
+}
+
+.site-footer__text a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.18em;
+  text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.site-footer__text a:hover {
+  color: color-mix(in srgb, var(--accent) 82%, var(--ink));
+  text-decoration-color: currentColor;
+}
+
+.site-footer__text a:focus-visible {
+  outline: 2px solid rgba(42, 143, 122, 0.45);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.site-footer .bmc-button {
+  margin-top: 0.35rem;
+  width: fit-content;
+  max-width: 100%;
+  justify-self: center;
 }
 
 .bmc-button {
   display: inline-flex;
-  max-width: 100%;
+  justify-content: center;
   line-height: 0;
   border-radius: 12px;
   transition: transform 0.15s ease, filter 0.15s ease;
@@ -554,7 +600,8 @@ body {
 
 .bmc-button img {
   display: block;
-  width: min(217px, 100%);
+  width: 217px;
+  max-width: 100%;
   height: auto;
 }
 
