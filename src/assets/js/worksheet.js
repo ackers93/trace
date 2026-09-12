@@ -23,6 +23,7 @@ const STYLES = {
   solid: { label: "Solid", className: "style-solid" },
   outline: { label: "Outline", className: "style-outline" },
   dotted: { label: "Dotted", className: "style-dotted" },
+  "faded-dots": { label: "Faded dots", className: "style-faded-dots" },
   faded: { label: "Faded", className: "style-faded" },
 };
 
@@ -76,7 +77,7 @@ function getState() {
 }
 
 function activeFontFamily(state) {
-  if (state.style === "dotted") return DOTTED_FAMILY;
+  if (state.style === "dotted" || state.style === "faded-dots") return DOTTED_FAMILY;
   const script = SCRIPTS[state.script] || SCRIPTS.manuscript;
   return script.family;
 }

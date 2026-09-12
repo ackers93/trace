@@ -144,11 +144,23 @@
   letter-spacing: 0.02em;
 }
 
-/* Dotted uses a purpose-built school tracing typeface */
+/* Dotted — real dotted glyphs from Edu AU VIC WA NT Dots */
 .style-dotted .worksheet-word,
-.style-dotted .worksheet-word__svg text {
+.style-dotted .worksheet-word__svg text,
+.style-faded-dots .worksheet-word,
+.style-faded-dots .worksheet-word__svg text {
   font-family: var(--font-dotted);
   letter-spacing: 0.03em;
+}
+
+.style-dotted .worksheet-word__svg text {
+  fill: var(--ws-ink);
+  stroke: none;
+}
+
+.style-faded-dots .worksheet-word__svg text {
+  fill: var(--ws-faded);
+  stroke: none;
 }
 
 .worksheet-word__svg {
@@ -181,12 +193,6 @@
   stroke-width: var(--ws-stroke);
   stroke-linejoin: round;
   stroke-linecap: round;
-}
-
-/* Dotted — real dotted glyphs from Edu AU VIC WA NT Dots */
-.style-dotted .worksheet-word__svg text {
-  fill: var(--ws-ink);
-  stroke: none;
 }
 
 .worksheet-empty {
