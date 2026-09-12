@@ -210,7 +210,15 @@
 @media screen {
   .preview__frame {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .worksheet-page-scale {
+    display: flex;
     justify-content: center;
+    overflow: hidden;
   }
 
   .worksheet-page {
@@ -231,7 +239,7 @@
     width: auto !important;
     height: auto !important;
     min-height: 0 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
   }
 
   .no-print {
@@ -250,8 +258,15 @@
     background: transparent !important;
     border: 0 !important;
     box-shadow: none !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     min-height: 0 !important;
+  }
+
+  .worksheet-page-scale {
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   .worksheet-page {
@@ -260,12 +275,17 @@
     transform: none !important;
     max-width: none !important;
     overflow: hidden !important;
-    page-break-after: avoid !important;
-    break-after: avoid !important;
+    page-break-after: always !important;
+    break-after: page !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  .worksheet-page:last-child {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 
   .worksheet-page.page-a4 {

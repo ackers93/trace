@@ -38,6 +38,8 @@ let pageStyleEl = null;
 let measureCtx = null;
 /** @type {string[]} */
 let linePattern = [...DEFAULT_PATTERN];
+/** @type {string[]} */
+let pageWords = [""];
 
 function ensurePageStyle() {
   if (pageStyleEl) return pageStyleEl;
@@ -53,14 +55,12 @@ function setPrintPageSize(page) {
 }
 
 const els = {
-  name: document.getElementById("name-input"),
   size: document.getElementById("size-input"),
   sizeValue: document.getElementById("size-value"),
   guides: document.getElementById("guides-input"),
   linePattern: document.getElementById("line-pattern"),
-  page: document.getElementById("worksheet-page"),
-  lines: document.getElementById("worksheet-lines"),
-  subtitle: document.getElementById("worksheet-subtitle"),
+  pagesList: document.getElementById("pages-list"),
+  pages: document.getElementById("worksheet-pages"),
   print: document.getElementById("print-btn"),
 };
 
@@ -74,11 +74,10 @@ function normalizeStyle(key) {
 }
 
 function getState() {
-  const raw = (els.name?.value ?? "").trim();
   const pattern = linePattern.length ? linePattern.map(normalizeStyle) : ["dotted"];
+  const words = pageWords.length ? pageWords : [""];
   return {
-    text: raw || PLACEHOLDER,
-    isPlaceholder: !raw,
+    words,
     script: selectedValue("script") || "manuscript",
     pattern,
     page: selectedValue("page") || "a4",
@@ -97,10 +96,9 @@ function fontFamilyForStyle(state, styleKey) {
   return scriptFontFamily(state);
 }
 
-function applyPageShell(state) {
+function pageShellClass(state) {
   const script = SCRIPTS[state.script] || SCRIPTS.manuscript;
-
-  els.page.className = [
+  return [
     "worksheet-page",
     state.page === "letter" ? "page-letter" : "page-a4",
     script.className,
@@ -108,9 +106,12 @@ function applyPageShell(state) {
   ]
     .filter(Boolean)
     .join(" ");
+}
 
-  els.page.style.setProperty("--ws-font-size", `${state.size}px`);
-  els.page.style.setProperty("--ws-line-gap", `${Math.max(16, state.size * 0.3)}px`);
+function applyPageShell(pageEl, state) {
+  pageEl.className = pageShellClass(state);
+  pageEl.style.setProperty("--ws-font-size", `${state.size}px`);
+  pageEl.style.setProperty("--ws-line-gap", `${Math.max(16, state.size * 0.3)}px`);
 }
 
 function getMeasureCtx() {
@@ -149,8 +150,8 @@ function measureGuideMetrics(fontFamily, fontSize) {
   return { top, mid, base, desc, rowHeight, fontSize, fontFamily, pad };
 }
 
-function applyGuideMetrics(metrics) {
-  const s = els.page.style;
+function applyGuideMetrics(pageEl, metrics) {
+  const s = pageEl.style;
   s.setProperty("--ws-row-height", `${metrics.rowHeight}px`);
   s.setProperty("--ws-guide-top", `${metrics.top}px`);
   s.setProperty("--ws-guide-mid", `${metrics.mid}px`);
@@ -208,13 +209,13 @@ function createRow(text, metrics, styleKey) {
   return row;
 }
 
-function measureTextWidth(text, metrics) {
+function measureTextWidth(hostLines, text, metrics) {
   const probe = createRow(text, metrics, "solid");
   probe.style.cssText = "position:absolute;left:-9999px;top:0;pointer-events:none";
   const word = probe.querySelector(".worksheet-word");
   if (word) word.style.width = "max-content";
 
-  els.lines.appendChild(probe);
+  hostLines.appendChild(probe);
   const svgText = word?.querySelector("text");
   const width =
     svgText && typeof svgText.getComputedTextLength === "function"
@@ -224,33 +225,61 @@ function measureTextWidth(text, metrics) {
   return width;
 }
 
-function repeatsAcrossLine(text, metrics) {
-  const available = els.lines.clientWidth;
-  const one = measureTextWidth(text, metrics);
+function repeatsAcrossLine(hostLines, text, metrics) {
+  const available = hostLines.clientWidth;
+  const one = measureTextWidth(hostLines, text, metrics);
   if (!one || !available) return 1;
 
-  const two = measureTextWidth(`${text}${LINE_GAP}${text}`, metrics);
+  const two = measureTextWidth(hostLines, `${text}${LINE_GAP}${text}`, metrics);
   const gap = Math.max(0, two - one * 2);
   return Math.max(1, Math.floor((available + gap) / (one + gap)));
 }
 
-function lineText(text, metrics) {
-  const count = repeatsAcrossLine(text, metrics);
+function lineText(hostLines, text, metrics) {
+  const count = repeatsAcrossLine(hostLines, text, metrics);
   return Array.from({ length: count }, () => text).join(LINE_GAP);
 }
 
 function fitPreviewScale() {
-  const frame = els.page?.parentElement;
-  if (!frame || !els.page) return;
+  const frame = els.pages;
+  if (!frame) return;
 
-  els.page.style.transform = "none";
-  const pageWidth = els.page.offsetWidth;
+  const pages = [...frame.querySelectorAll(".worksheet-page")];
+  if (!pages.length) return;
+
+  pages.forEach((page) => {
+    page.style.transform = "none";
+    const shell = page.parentElement;
+    if (shell?.classList.contains("worksheet-page-scale")) {
+      shell.style.width = "";
+      shell.style.height = "";
+    }
+  });
+
+  const pageWidth = pages[0].offsetWidth;
   const available = frame.clientWidth - 8;
   if (!pageWidth || available <= 0) return;
 
   const scale = Math.min(1, available / pageWidth);
-  els.page.style.transform = scale < 0.999 ? `scale(${scale})` : "none";
-  frame.style.minHeight = `${els.page.offsetHeight * scale + 8}px`;
+
+  pages.forEach((page) => {
+    let shell = page.parentElement;
+    if (!shell?.classList.contains("worksheet-page-scale")) {
+      shell = document.createElement("div");
+      shell.className = "worksheet-page-scale";
+      page.replaceWith(shell);
+      shell.appendChild(page);
+    }
+
+    const width = page.offsetWidth;
+    const height = page.offsetHeight;
+    page.style.transform = scale < 0.999 ? `scale(${scale})` : "none";
+    page.style.transformOrigin = "top center";
+    shell.style.width = `${width * scale}px`;
+    shell.style.height = `${height * scale}px`;
+  });
+
+  frame.style.minHeight = "";
 }
 
 function metricsForStyle(state, styleKey, baseMetrics) {
@@ -259,28 +288,54 @@ function metricsForStyle(state, styleKey, baseMetrics) {
   return { ...baseMetrics, fontFamily: family };
 }
 
-function fillPage(state, baseMetrics) {
-  els.lines.replaceChildren();
+function createPageElement() {
+  const page = document.createElement("div");
+  page.className = "worksheet-page";
+  page.setAttribute("aria-live", "polite");
 
-  els.subtitle.textContent = state.isPlaceholder ? "Enter a name to begin" : state.text;
+  const header = document.createElement("div");
+  header.className = "worksheet-page__header";
+
+  const title = document.createElement("span");
+  title.className = "worksheet-page__title";
+  title.textContent = "Trace";
+
+  const subtitle = document.createElement("span");
+  subtitle.className = "worksheet-page__subtitle";
+
+  header.append(title, subtitle);
+
+  const lines = document.createElement("div");
+  lines.className = "worksheet-page__lines";
+
+  page.append(header, lines);
+  return { page, subtitle, lines };
+}
+
+function fillPage(pageEl, linesEl, subtitleEl, state, baseMetrics, rawWord) {
+  const text = rawWord.trim() || PLACEHOLDER;
+  const isPlaceholder = !rawWord.trim();
+
+  linesEl.replaceChildren();
+  subtitleEl.textContent = isPlaceholder ? "Enter a name to begin" : text;
 
   const pattern = state.pattern;
   const textByStyle = new Map();
   for (const styleKey of pattern) {
     if (styleKey === "guides" || textByStyle.has(styleKey)) continue;
     const metrics = metricsForStyle(state, styleKey, baseMetrics);
-    textByStyle.set(styleKey, lineText(state.text, metrics));
+    textByStyle.set(styleKey, lineText(linesEl, text, metrics));
   }
 
   const probeStyle = pattern.find((key) => key !== "guides") || "solid";
   const probeMetrics = metricsForStyle(state, probeStyle, baseMetrics);
-  const probeText = textByStyle.get(probeStyle) || state.text;
+  const probeText = textByStyle.get(probeStyle) || text;
   const probe = createRow(probeText, probeMetrics, probeStyle);
-  els.lines.appendChild(probe);
+  linesEl.appendChild(probe);
 
-  const available = els.lines.clientHeight;
+  const available = linesEl.clientHeight;
   const rowHeight = probe.getBoundingClientRect().height || baseMetrics.rowHeight;
-  const styles = getComputedStyle(els.lines);
+  const styles = getComputedStyle(linesEl);
   const gap = parseFloat(styles.rowGap || styles.gap || "0") || 0;
 
   let count = 1;
@@ -288,12 +343,12 @@ function fillPage(state, baseMetrics) {
     count = Math.max(1, Math.floor((available + gap) / (rowHeight + gap)));
   }
 
-  els.lines.replaceChildren();
+  linesEl.replaceChildren();
   for (let i = 0; i < count; i += 1) {
     const styleKey = pattern[i % pattern.length];
     const metrics = metricsForStyle(state, styleKey, baseMetrics);
-    const filled = styleKey === "guides" ? "" : textByStyle.get(styleKey) || state.text;
-    els.lines.appendChild(createRow(filled, metrics, styleKey));
+    const filled = styleKey === "guides" ? "" : textByStyle.get(styleKey) || text;
+    linesEl.appendChild(createRow(filled, metrics, styleKey));
   }
 }
 
@@ -376,20 +431,110 @@ function renderLinePatternEditor() {
   els.linePattern.appendChild(actions);
 }
 
+function renderPagesEditor() {
+  if (!els.pagesList) return;
+
+  const active = document.activeElement;
+  const activeIndex =
+    active instanceof HTMLInputElement && active.dataset.pageIndex != null
+      ? Number(active.dataset.pageIndex)
+      : null;
+  const selectionStart = active instanceof HTMLInputElement ? active.selectionStart : null;
+  const selectionEnd = active instanceof HTMLInputElement ? active.selectionEnd : null;
+
+  els.pagesList.replaceChildren();
+
+  pageWords.forEach((word, index) => {
+    const row = document.createElement("div");
+    row.className = "pages-list__row";
+
+    const label = document.createElement("span");
+    label.className = "line-pattern__index";
+    label.textContent = String(index + 1);
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "field__input";
+    input.placeholder = PLACEHOLDER;
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    input.maxLength = 40;
+    input.value = word;
+    input.dataset.pageIndex = String(index);
+    input.setAttribute("aria-label", `Page ${index + 1} word`);
+    input.addEventListener("input", () => {
+      pageWords[index] = input.value;
+      render();
+    });
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "btn btn--ghost";
+    remove.textContent = "Remove";
+    remove.disabled = pageWords.length <= 1;
+    remove.addEventListener("click", () => {
+      if (pageWords.length <= 1) return;
+      pageWords.splice(index, 1);
+      renderPagesEditor();
+      render();
+    });
+
+    row.append(label, input, remove);
+    els.pagesList.appendChild(row);
+  });
+
+  const actions = document.createElement("div");
+  actions.className = "line-pattern__actions";
+
+  const add = document.createElement("button");
+  add.type = "button";
+  add.className = "btn btn--ghost";
+  add.textContent = "Add page";
+  add.addEventListener("click", () => {
+    pageWords.push("");
+    renderPagesEditor();
+    render();
+    const inputs = els.pagesList.querySelectorAll("input");
+    const last = inputs[inputs.length - 1];
+    last?.focus();
+  });
+
+  actions.appendChild(add);
+  els.pagesList.appendChild(actions);
+
+  if (activeIndex != null && Number.isFinite(activeIndex)) {
+    const next = els.pagesList.querySelector(`input[data-page-index="${activeIndex}"]`);
+    if (next instanceof HTMLInputElement) {
+      next.focus();
+      if (selectionStart != null && selectionEnd != null) {
+        next.setSelectionRange(selectionStart, selectionEnd);
+      }
+    }
+  }
+}
+
 async function render() {
-  if (!els.page || !els.lines) return;
+  if (!els.pages) return;
 
   const state = getState();
   if (els.sizeValue) els.sizeValue.textContent = String(state.size);
 
-  applyPageShell(state);
   setPrintPageSize(state.page);
   await ensureScriptFont(state);
 
   // Guide geometry stays on the script face so mixed styles share one staff height.
   const metrics = measureGuideMetrics(scriptFontFamily(state), state.size);
-  applyGuideMetrics(metrics);
-  fillPage(state, metrics);
+
+  els.pages.replaceChildren();
+
+  state.words.forEach((word) => {
+    const { page, subtitle, lines } = createPageElement();
+    applyPageShell(page, state);
+    applyGuideMetrics(page, metrics);
+    els.pages.appendChild(page);
+    fillPage(page, lines, subtitle, state, metrics, word);
+  });
+
   fitPreviewScale();
 }
 
@@ -398,7 +543,6 @@ function bind() {
     render();
   };
 
-  els.name?.addEventListener("input", rerender);
   els.size?.addEventListener("input", rerender);
   els.guides?.addEventListener("change", rerender);
 
@@ -415,9 +559,13 @@ function bind() {
 
   const printMq = window.matchMedia("print");
   const preparePrint = () => {
-    els.page.style.transform = "none";
-    const frame = els.page?.parentElement;
-    if (frame) frame.style.minHeight = "";
+    els.pages?.querySelectorAll(".worksheet-page").forEach((page) => {
+      page.style.transform = "none";
+    });
+    els.pages?.querySelectorAll(".worksheet-page-scale").forEach((shell) => {
+      shell.style.width = "";
+      shell.style.height = "";
+    });
   };
   printMq.addEventListener?.("change", () => {
     if (printMq.matches) preparePrint();
@@ -428,6 +576,7 @@ function bind() {
 }
 
 renderLinePatternEditor();
+renderPagesEditor();
 bind();
 render();
 

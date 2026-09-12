@@ -168,6 +168,18 @@ body {
   margin-top: 0.15rem;
 }
 
+.pages-list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.pages-list__row {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+  gap: 0.4rem;
+  align-items: center;
+}
+
 .btn--ghost {
   background: transparent;
   color: var(--ink-soft);
