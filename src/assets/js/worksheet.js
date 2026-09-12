@@ -301,7 +301,7 @@ function createPageElement() {
 
   const title = document.createElement("span");
   title.className = "worksheet-page__title";
-  title.textContent = "Trace";
+  title.textContent = "Print&Trace";
 
   const subtitle = document.createElement("span");
   subtitle.className = "worksheet-page__subtitle";
