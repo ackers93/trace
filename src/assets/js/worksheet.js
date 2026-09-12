@@ -31,7 +31,29 @@ const STYLES = {
 const DOTTED_STYLES = new Set(["dotted", "faded-dots"]);
 const PLACEHOLDER = "Emma";
 const LINE_GAP = "    ";
-const DEFAULT_PATTERN = ["solid", "faded", "faded", "dotted", "faded-dots"];
+/** Defaults for the first rows; any extra page rows become guides-only. */
+const DEFAULT_PATTERN = ["solid", "faded", "dotted", "faded-dots", "guides"];
+
+function defaultStyleForIndex(index) {
+  return DEFAULT_PATTERN[index] ?? "guides";
+}
+
+/** Grow/shrink the pattern to match how many rows fit on the page. */
+function syncLinePatternLength(count) {
+  const target = Math.max(1, count);
+  let changed = false;
+
+  while (linePattern.length < target) {
+    linePattern.push(defaultStyleForIndex(linePattern.length));
+    changed = true;
+  }
+  if (linePattern.length > target) {
+    linePattern.length = target;
+    changed = true;
+  }
+
+  return changed;
+}
 
 /** Injected so @page size tracks A4 / Letter for print. */
 let pageStyleEl = null;
@@ -315,7 +337,27 @@ function createPageElement() {
   return { page, subtitle, lines };
 }
 
-function fillPage(pageEl, linesEl, subtitleEl, state, baseMetrics, rawWord) {
+function countFittingRows(linesEl, state, baseMetrics) {
+  const probeStyle = state.pattern.find((key) => key !== "guides") || "solid";
+  const probeMetrics = metricsForStyle(state, probeStyle, baseMetrics);
+  const probe = createRow(PLACEHOLDER, probeMetrics, probeStyle);
+  linesEl.replaceChildren();
+  linesEl.appendChild(probe);
+
+  const available = linesEl.clientHeight;
+  const rowHeight = probe.getBoundingClientRect().height || baseMetrics.rowHeight;
+  const styles = getComputedStyle(linesEl);
+  const gap = parseFloat(styles.rowGap || styles.gap || "0") || 0;
+
+  probe.remove();
+
+  if (rowHeight > 0 && available > 0) {
+    return Math.max(1, Math.floor((available + gap) / (rowHeight + gap)));
+  }
+  return 1;
+}
+
+function fillPage(pageEl, linesEl, subtitleEl, state, baseMetrics, rawWord, rowCount) {
   const text = rawWord.trim() || PLACEHOLDER;
   const isPlaceholder = !rawWord.trim();
 
@@ -330,25 +372,8 @@ function fillPage(pageEl, linesEl, subtitleEl, state, baseMetrics, rawWord) {
     textByStyle.set(styleKey, lineText(linesEl, text, metrics));
   }
 
-  const probeStyle = pattern.find((key) => key !== "guides") || "solid";
-  const probeMetrics = metricsForStyle(state, probeStyle, baseMetrics);
-  const probeText = textByStyle.get(probeStyle) || text;
-  const probe = createRow(probeText, probeMetrics, probeStyle);
-  linesEl.appendChild(probe);
-
-  const available = linesEl.clientHeight;
-  const rowHeight = probe.getBoundingClientRect().height || baseMetrics.rowHeight;
-  const styles = getComputedStyle(linesEl);
-  const gap = parseFloat(styles.rowGap || styles.gap || "0") || 0;
-
-  let count = 1;
-  if (rowHeight > 0 && available > 0) {
-    count = Math.max(1, Math.floor((available + gap) / (rowHeight + gap)));
-  }
-
-  linesEl.replaceChildren();
-  for (let i = 0; i < count; i += 1) {
-    const styleKey = pattern[i % pattern.length];
+  for (let i = 0; i < rowCount; i += 1) {
+    const styleKey = pattern[i] ?? defaultStyleForIndex(i);
     const metrics = metricsForStyle(state, styleKey, baseMetrics);
     const filled = styleKey === "guides" ? "" : textByStyle.get(styleKey) || text;
     linesEl.appendChild(createRow(filled, metrics, styleKey));
@@ -381,6 +406,12 @@ function styleOptionsHtml(selected) {
 function renderLinePatternEditor() {
   if (!els.linePattern) return;
 
+  const active = document.activeElement;
+  const activeIndex =
+    active instanceof HTMLSelectElement && active.dataset.lineIndex != null
+      ? Number(active.dataset.lineIndex)
+      : null;
+
   els.linePattern.replaceChildren();
 
   linePattern.forEach((styleKey, index) => {
@@ -393,6 +424,7 @@ function renderLinePatternEditor() {
 
     const select = document.createElement("select");
     select.className = "field__input line-pattern__select";
+    select.dataset.lineIndex = String(index);
     select.setAttribute("aria-label", `Line ${index + 1} style`);
     select.innerHTML = styleOptionsHtml(normalizeStyle(styleKey));
     select.addEventListener("change", () => {
@@ -400,38 +432,14 @@ function renderLinePatternEditor() {
       render();
     });
 
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "btn btn--ghost line-pattern__remove";
-    remove.textContent = "Remove";
-    remove.disabled = linePattern.length <= 1;
-    remove.addEventListener("click", () => {
-      if (linePattern.length <= 1) return;
-      linePattern.splice(index, 1);
-      renderLinePatternEditor();
-      render();
-    });
-
-    row.append(label, select, remove);
+    row.append(label, select);
     els.linePattern.appendChild(row);
   });
 
-  const actions = document.createElement("div");
-  actions.className = "line-pattern__actions";
-
-  const add = document.createElement("button");
-  add.type = "button";
-  add.className = "btn btn--ghost";
-  add.textContent = "Add line";
-  add.addEventListener("click", () => {
-    const last = linePattern[linePattern.length - 1] || "dotted";
-    linePattern.push(last);
-    renderLinePatternEditor();
-    render();
-  });
-
-  actions.appendChild(add);
-  els.linePattern.appendChild(actions);
+  if (activeIndex != null && Number.isFinite(activeIndex)) {
+    const next = els.linePattern.querySelector(`select[data-line-index="${activeIndex}"]`);
+    next?.focus();
+  }
 }
 
 function renderPagesEditor() {
@@ -519,7 +527,7 @@ function renderPagesEditor() {
 async function render() {
   if (!els.pages) return;
 
-  const state = getState();
+  let state = getState();
   if (els.sizeValue) els.sizeValue.textContent = String(state.size);
 
   setPrintPageSize(state.page);
@@ -527,6 +535,23 @@ async function render() {
 
   // Guide geometry stays on the script face so mixed styles share one staff height.
   const metrics = measureGuideMetrics(scriptFontFamily(state), state.size);
+
+  els.pages.replaceChildren();
+
+  // Measure once on a live page shell so the pattern picker matches printable rows.
+  const probe = createPageElement();
+  applyPageShell(probe.page, state);
+  applyGuideMetrics(probe.page, metrics);
+  const probeShell = document.createElement("div");
+  probeShell.className = "worksheet-page-scale";
+  probeShell.appendChild(probe.page);
+  els.pages.appendChild(probeShell);
+
+  const rowCount = countFittingRows(probe.lines, state, metrics);
+  if (syncLinePatternLength(rowCount)) {
+    renderLinePatternEditor();
+    state = getState();
+  }
 
   els.pages.replaceChildren();
 
@@ -539,7 +564,7 @@ async function render() {
     shell.className = "worksheet-page-scale";
     shell.appendChild(page);
     els.pages.appendChild(shell);
-    fillPage(page, lines, subtitle, state, metrics, word);
+    fillPage(page, lines, subtitle, state, metrics, word, rowCount);
   });
 
   fitPreviewScale();
