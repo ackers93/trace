@@ -5,9 +5,32 @@ description: Make printable tracing worksheets for your child’s name. Choose s
 ---
 
 <header class="hero no-print">
+  <div class="hero__staff" aria-hidden="true">
+    <span class="hero__staff-line hero__staff-line--top"></span>
+    <span class="hero__staff-line hero__staff-line--mid"></span>
+    <span class="hero__staff-line hero__staff-line--base"></span>
+    <span class="hero__staff-line hero__staff-line--desc"></span>
+  </div>
+
   <div class="hero__inner">
-    <p class="hero__brand">Trace</p>
+    <h1 class="hero__brand">
+      <span class="hero__brand-label">Trace</span>
+      <svg class="hero__mark" viewBox="0 0 560 150" aria-hidden="true" focusable="false">
+        <text class="hero__mark-ghost" x="280" y="112" text-anchor="middle">Trace</text>
+        <text class="hero__mark-dash" x="280" y="112" text-anchor="middle">Trace</text>
+        <text class="hero__mark-ink" x="280" y="112" text-anchor="middle">Trace</text>
+      </svg>
+    </h1>
     <p class="hero__tagline">Printable name worksheets for little hands</p>
+    <svg class="hero__trail" viewBox="0 0 320 36" aria-hidden="true" focusable="false">
+      <path
+        class="hero__trail-path"
+        d="M8 22 C 48 6, 92 30, 140 16 S 220 4, 312 20"
+        fill="none"
+        pathLength="100"
+      />
+      <circle class="hero__trail-tip" r="4.5" cx="8" cy="22" />
+    </svg>
   </div>
 </header>
 
