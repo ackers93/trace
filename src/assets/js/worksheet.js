@@ -6,7 +6,7 @@
 const SCRIPTS = {
   manuscript: {
     label: "Manuscript",
-    family: '"Patrick Hand", "Segoe Print", "Comic Sans MS", cursive',
+    family: '"Edu AU VIC WA NT Hand", "Segoe Print", "Comic Sans MS", cursive',
     className: "script-manuscript",
   },
   cursive: {
@@ -15,6 +15,9 @@ const SCRIPTS = {
     className: "script-cursive",
   },
 };
+
+/** Purpose-built dotted tracing face (Google Fonts, OFL). */
+const DOTTED_FAMILY = '"Edu AU VIC WA NT Dots", "Edu AU VIC WA NT Hand", cursive';
 
 const STYLES = {
   solid: { label: "Solid", className: "style-solid" },
@@ -70,6 +73,12 @@ function getState() {
     size: Number(els.size?.value || 48),
     guides: Boolean(els.guides?.checked),
   };
+}
+
+function activeFontFamily(state) {
+  if (state.style === "dotted") return DOTTED_FAMILY;
+  const script = SCRIPTS[state.script] || SCRIPTS.manuscript;
+  return script.family;
 }
 
 function applyPageShell(state) {
@@ -147,7 +156,7 @@ function appendSvgText(svg, text, metrics) {
   return svgText;
 }
 
-function createWordNode(text, metrics, styleKey) {
+function createWordNode(text, metrics) {
   const wrap = document.createElement("div");
   wrap.className = "worksheet-word";
 
@@ -156,33 +165,15 @@ function createWordNode(text, metrics, styleKey) {
   svg.setAttribute("aria-hidden", "true");
   svg.setAttribute("height", String(metrics.rowHeight));
   svg.style.height = `${metrics.rowHeight}px`;
-
-  if (styleKey === "dotted") {
-    // Hollow dotted outline — guide lines stay visible through letter interiors.
-    const svgText = appendSvgText(svg, text, metrics);
-    svgText.setAttribute("fill", "none");
-    svgText.setAttribute("stroke", "currentColor");
-    svgText.setAttribute("stroke-width", String(Math.max(1.2, metrics.fontSize * 0.032)));
-    svgText.setAttribute("stroke-linejoin", "round");
-    svgText.setAttribute("stroke-linecap", "round");
-    svgText.setAttribute(
-      "stroke-dasharray",
-      `${Math.max(1.1, metrics.fontSize * 0.028)} ${Math.max(2.2, metrics.fontSize * 0.07)}`,
-    );
-  } else {
-    appendSvgText(svg, text, metrics);
-  }
-
+  appendSvgText(svg, text, metrics);
   wrap.appendChild(svg);
   return wrap;
 }
 
-function createRow(text, metrics, styleKey) {
+function createRow(text, metrics) {
   const row = document.createElement("div");
   row.className = "worksheet-row";
 
-  // Guides first in DOM, but painted above the letters via CSS z-index
-  // so ruled lines run through the practice text.
   const guides = document.createElement("div");
   guides.className = "worksheet-row__guides";
   guides.setAttribute("aria-hidden", "true");
@@ -193,13 +184,13 @@ function createRow(text, metrics, styleKey) {
     guides.appendChild(line);
   }
 
-  row.appendChild(createWordNode(text, metrics, styleKey));
   row.appendChild(guides);
+  row.appendChild(createWordNode(text, metrics));
   return row;
 }
 
-function measureTextWidth(text, metrics, styleKey) {
-  const probe = createRow(text, metrics, styleKey);
+function measureTextWidth(text, metrics) {
+  const probe = createRow(text, metrics);
   probe.style.cssText = "position:absolute;left:-9999px;top:0;pointer-events:none";
   const word = probe.querySelector(".worksheet-word");
   if (word) word.style.width = "max-content";
@@ -214,18 +205,18 @@ function measureTextWidth(text, metrics, styleKey) {
   return width;
 }
 
-function repeatsAcrossLine(text, metrics, styleKey) {
+function repeatsAcrossLine(text, metrics) {
   const available = els.lines.clientWidth;
-  const one = measureTextWidth(text, metrics, styleKey);
+  const one = measureTextWidth(text, metrics);
   if (!one || !available) return 1;
 
-  const two = measureTextWidth(`${text}${LINE_GAP}${text}`, metrics, styleKey);
+  const two = measureTextWidth(`${text}${LINE_GAP}${text}`, metrics);
   const gap = Math.max(0, two - one * 2);
   return Math.max(1, Math.floor((available + gap) / (one + gap)));
 }
 
-function lineText(text, metrics, styleKey) {
-  const count = repeatsAcrossLine(text, metrics, styleKey);
+function lineText(text, metrics) {
+  const count = repeatsAcrossLine(text, metrics);
   return Array.from({ length: count }, () => text).join(LINE_GAP);
 }
 
@@ -248,8 +239,8 @@ function fillPage(state, metrics) {
 
   els.subtitle.textContent = state.isPlaceholder ? "Enter a name to begin" : state.text;
 
-  const filled = lineText(state.text, metrics, state.style);
-  const probe = createRow(filled, metrics, state.style);
+  const filled = lineText(state.text, metrics);
+  const probe = createRow(filled, metrics);
   els.lines.appendChild(probe);
 
   const available = els.lines.clientHeight;
@@ -264,15 +255,15 @@ function fillPage(state, metrics) {
 
   els.lines.replaceChildren();
   for (let i = 0; i < count; i += 1) {
-    els.lines.appendChild(createRow(filled, metrics, state.style));
+    els.lines.appendChild(createRow(filled, metrics));
   }
 }
 
 async function ensureScriptFont(state) {
-  const script = SCRIPTS[state.script] || SCRIPTS.manuscript;
+  const family = activeFontFamily(state);
   if (!document.fonts?.load) return;
   try {
-    await document.fonts.load(`${state.size}px ${script.family}`);
+    await document.fonts.load(`${state.size}px ${family}`);
     await document.fonts.ready;
   } catch {
     /* keep going with fallbacks */
@@ -285,12 +276,11 @@ async function render() {
   const state = getState();
   if (els.sizeValue) els.sizeValue.textContent = String(state.size);
 
-  const script = SCRIPTS[state.script] || SCRIPTS.manuscript;
   applyPageShell(state);
   setPrintPageSize(state.page);
   await ensureScriptFont(state);
 
-  const metrics = measureGuideMetrics(script.family, state.size);
+  const metrics = measureGuideMetrics(activeFontFamily(state), state.size);
   applyGuideMetrics(metrics);
   fillPage(state, metrics);
   fitPreviewScale();

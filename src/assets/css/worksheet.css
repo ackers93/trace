@@ -13,8 +13,9 @@
   --ws-stroke: 0.035em;
   --ws-dot: 0.07em;
   --ws-page-pad: 0.5in;
-  --font-manuscript: "Patrick Hand", "Segoe Print", "Comic Sans MS", cursive;
+  --font-manuscript: "Edu AU VIC WA NT Hand", "Segoe Print", "Comic Sans MS", cursive;
   --font-cursive: "Dancing Script", "Segoe Script", "Brush Script MT", cursive;
+  --font-dotted: "Edu AU VIC WA NT Dots", "Edu AU VIC WA NT Hand", cursive;
 }
 
 .worksheet-page {
@@ -86,8 +87,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  /* Draw guides on top so lines run through the letters */
-  z-index: 2;
+  z-index: 0;
 }
 
 .worksheet-row__guide {
@@ -128,7 +128,7 @@
   font-size: var(--ws-font-size);
   line-height: 1;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
   letter-spacing: 0.04em;
   color: var(--ws-ink);
 }
@@ -142,6 +142,13 @@
 .script-cursive .worksheet-word__svg text {
   font-family: var(--font-cursive);
   letter-spacing: 0.02em;
+}
+
+/* Dotted uses a purpose-built school tracing typeface */
+.style-dotted .worksheet-word,
+.style-dotted .worksheet-word__svg text {
+  font-family: var(--font-dotted);
+  letter-spacing: 0.03em;
 }
 
 .worksheet-word__svg {
@@ -176,9 +183,10 @@
   stroke-linecap: round;
 }
 
-/* Dotted — thin dashed stroke set in JS; keep CSS from overriding fill */
+/* Dotted — real dotted glyphs from Edu AU VIC WA NT Dots */
 .style-dotted .worksheet-word__svg text {
-  fill: none;
+  fill: var(--ws-ink);
+  stroke: none;
 }
 
 .worksheet-empty {
