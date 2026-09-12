@@ -1,0 +1,120 @@
+---
+layout: layouts/base.njk
+title: Trace — Printable name worksheets
+description: Make printable tracing worksheets for your child’s name. Choose size, manuscript or cursive, and solid, dotted, or faded letters.
+---
+
+<header class="hero no-print">
+  <div class="hero__inner">
+    <p class="hero__brand">Trace</p>
+    <p class="hero__tagline">Printable name worksheets for little hands</p>
+  </div>
+</header>
+
+<main class="tool">
+  <section class="controls no-print" aria-label="Worksheet options">
+    <div class="controls__grid">
+      <label class="field field--wide">
+        <span class="field__label">Name or word</span>
+        <input
+          type="text"
+          id="name-input"
+          class="field__input"
+          placeholder="Emma"
+          autocomplete="off"
+          spellcheck="false"
+          maxlength="40"
+        >
+      </label>
+
+      <fieldset class="field">
+        <legend class="field__label">Script</legend>
+        <div class="segmented" role="radiogroup" aria-label="Script">
+          <label class="segmented__option">
+            <input type="radio" name="script" value="manuscript" checked>
+            <span>Manuscript</span>
+          </label>
+          <label class="segmented__option">
+            <input type="radio" name="script" value="cursive">
+            <span>Cursive</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="field">
+        <legend class="field__label">Style</legend>
+        <div class="segmented segmented--wrap" role="radiogroup" aria-label="Style">
+          <label class="segmented__option">
+            <input type="radio" name="style" value="solid">
+            <span>Solid</span>
+          </label>
+          <label class="segmented__option">
+            <input type="radio" name="style" value="outline">
+            <span>Outline</span>
+          </label>
+          <label class="segmented__option">
+            <input type="radio" name="style" value="dotted" checked>
+            <span>Dotted</span>
+          </label>
+          <label class="segmented__option">
+            <input type="radio" name="style" value="faded">
+            <span>Faded</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <label class="field">
+        <span class="field__label">Size <span id="size-value" class="field__hint">48</span></span>
+        <input
+          type="range"
+          id="size-input"
+          class="field__range"
+          min="28"
+          max="96"
+          step="2"
+          value="48"
+        >
+      </label>
+
+      <fieldset class="field">
+        <legend class="field__label">Page</legend>
+        <div class="segmented" role="radiogroup" aria-label="Page size">
+          <label class="segmented__option">
+            <input type="radio" name="page" value="a4" checked>
+            <span>A4</span>
+          </label>
+          <label class="segmented__option">
+            <input type="radio" name="page" value="letter">
+            <span>Letter</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <label class="field field--check">
+        <input type="checkbox" id="guides-input" checked>
+        <span>Handwriting guide lines</span>
+      </label>
+    </div>
+
+    <div class="controls__actions">
+      <button type="button" id="print-btn" class="btn btn--primary">Print worksheet</button>
+    </div>
+  </section>
+
+  <section class="preview" aria-label="Worksheet preview">
+    <p class="preview__label no-print">Preview</p>
+    <div class="preview__frame">
+      <div
+        id="worksheet-page"
+        class="worksheet-page page-a4 script-manuscript style-dotted"
+        aria-live="polite"
+      >
+        <div class="worksheet-page__header">
+          <span class="worksheet-page__title">Trace</span>
+          <span id="worksheet-subtitle" class="worksheet-page__subtitle"></span>
+        </div>
+        <div id="worksheet-lines" class="worksheet-page__lines"></div>
+      </div>
+    </div>
+  </section>
+</main>
