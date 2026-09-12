@@ -61,9 +61,28 @@ body {
   contain: paint;
 }
 
+.hero__inner {
+  position: relative;
+  z-index: 1;
+  width: min(36rem, 100%);
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Brand + guide lines share one box so letters sit on the staff. */
+.hero__writing {
+  position: relative;
+  width: min(28rem, 100%);
+  margin: 0 auto;
+}
+
 .hero__staff {
   position: absolute;
-  inset: 18% 0 28%;
+  inset: 0;
+  left: 50%;
+  right: auto;
+  width: 100vw;
+  transform: translateX(-50%);
   pointer-events: none;
   z-index: 0;
   opacity: 0.55;
@@ -77,39 +96,32 @@ body {
   border-top: 2px solid var(--hero-guide);
 }
 
+/* Percentages match hero__mark viewBox (height 134): Fredoka cap 700, x 500 /em */
 .hero__staff-line--top {
-  top: 8%;
+  top: calc(100% * 20 / 134);
 }
 
 .hero__staff-line--mid {
-  top: 38%;
+  top: calc(100% * 40 / 134);
   border-top-color: var(--hero-guide-mid);
   border-top-style: dashed;
 }
 
 .hero__staff-line--base {
-  top: 68%;
+  top: calc(100% * 90 / 134);
 }
 
 .hero__staff-line--desc {
-  top: 92%;
+  top: calc(100% * 114 / 134);
   opacity: 0.65;
-}
-
-.hero__inner {
-  position: relative;
-  z-index: 1;
-  width: min(36rem, 100%);
-  max-width: 100%;
-  min-width: 0;
 }
 
 .hero__brand {
   position: relative;
+  z-index: 1;
   margin: 0;
   line-height: 0;
   max-width: 100%;
-  overflow: hidden;
 }
 
 .hero__brand-label {
@@ -126,15 +138,13 @@ body {
 
 .hero__mark {
   display: block;
-  width: min(28rem, 100%);
+  width: 100%;
   height: auto;
-  margin: 0 auto;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .hero__mark text {
   font-family: var(--font-brand);
-  font-size: 96px;
   font-weight: 600;
   letter-spacing: -0.03em;
 }
