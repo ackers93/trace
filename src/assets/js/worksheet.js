@@ -29,7 +29,7 @@ const STYLES = {
 };
 
 const DOTTED_STYLES = new Set(["dotted", "faded-dots"]);
-const PLACEHOLDER = "Emma";
+const PLACEHOLDER ="";
 const LINE_GAP = "    ";
 /** Defaults for the first rows; any extra page rows become guides-only. */
 const DEFAULT_PATTERN = ["solid", "faded", "dotted", "faded-dots", "guides"];
@@ -62,6 +62,8 @@ let measureCtx = null;
 let linePattern = [...DEFAULT_PATTERN];
 /** @type {string[]} */
 let pageWords = [""];
+/** Bumps on each render so stale async passes don't overwrite the preview. */
+let renderGeneration = 0;
 
 function ensurePageStyle() {
   if (pageStyleEl) return pageStyleEl;
@@ -527,11 +529,17 @@ function renderPagesEditor() {
 async function render() {
   if (!els.pages) return;
 
+  const generation = ++renderGeneration;
   let state = getState();
   if (els.sizeValue) els.sizeValue.textContent = String(state.size);
 
   setPrintPageSize(state.page);
   await ensureScriptFont(state);
+  if (generation !== renderGeneration) return;
+
+  // Re-read after the await so a name typed mid-load isn't dropped.
+  state = getState();
+  if (els.sizeValue) els.sizeValue.textContent = String(state.size);
 
   // Guide geometry stays on the script face so mixed styles share one staff height.
   const metrics = measureGuideMetrics(scriptFontFamily(state), state.size);
@@ -548,6 +556,8 @@ async function render() {
   els.pages.appendChild(probeShell);
 
   const rowCount = countFittingRows(probe.lines, state, metrics);
+  if (generation !== renderGeneration) return;
+
   if (syncLinePatternLength(rowCount)) {
     renderLinePatternEditor();
     state = getState();
@@ -567,6 +577,7 @@ async function render() {
     fillPage(page, lines, subtitle, state, metrics, word, rowCount);
   });
 
+  if (generation !== renderGeneration) return;
   fitPreviewScale();
 }
 
