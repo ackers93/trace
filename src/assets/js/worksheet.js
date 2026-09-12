@@ -308,13 +308,16 @@ function bind() {
   }
 
   const printMq = window.matchMedia("print");
+  const preparePrint = () => {
+    els.page.style.transform = "none";
+    const frame = els.page?.parentElement;
+    if (frame) frame.style.minHeight = "";
+  };
   printMq.addEventListener?.("change", () => {
-    if (printMq.matches) els.page.style.transform = "none";
+    if (printMq.matches) preparePrint();
     else fitPreviewScale();
   });
-  window.addEventListener("beforeprint", () => {
-    els.page.style.transform = "none";
-  });
+  window.addEventListener("beforeprint", preparePrint);
   window.addEventListener("afterprint", () => fitPreviewScale());
 }
 
