@@ -1,22 +1,11 @@
 /**
  * Worksheet generator — client-only, no storage.
- * Extend SCRIPTS / STYLES when adding fonts or style rules later.
+ * Extend STYLES / font families when adding line styles later.
  */
 
-const SCRIPTS = {
-  manuscript: {
-    label: "Manuscript",
-    family: '"Comic Neue", "Comic Sans MS", cursive',
-    className: "script-manuscript",
-  },
-  cursive: {
-    label: "Cursive",
-    family: '"Dancing Script", "Segoe Script", "Brush Script MT", cursive',
-    className: "script-cursive",
-  },
-};
-
-/** Real dotted glyph face (manuscript). Cursive has no dotted companion. */
+const MANUSCRIPT_FAMILY = '"Comic Neue", "Comic Sans MS", cursive';
+const CURSIVE_FAMILY = '"Dancing Script", "Segoe Script", "Brush Script MT", cursive';
+/** Real dotted glyph face (manuscript). No cursive dotted companion. */
 const DOTTED_FAMILY = '"Edu AU VIC WA NT Dots", "Comic Neue", "Comic Sans MS", cursive';
 
 const STYLES = {
@@ -25,14 +14,17 @@ const STYLES = {
   dotted: { label: "Dotted", className: "style-dotted" },
   "faded-dots": { label: "Faded dots", className: "style-faded-dots" },
   faded: { label: "Faded", className: "style-faded" },
+  cursive: { label: "Cursive", className: "style-cursive" },
+  "faded-cursive": { label: "Faded cursive", className: "style-faded-cursive" },
   guides: { label: "Guides only", className: "style-guides-only" },
 };
 
 const DOTTED_STYLES = new Set(["dotted", "faded-dots"]);
-const PLACEHOLDER ="";
+const CURSIVE_STYLES = new Set(["cursive", "faded-cursive"]);
+const PLACEHOLDER = "";
 const LINE_GAP = "    ";
 /** Defaults for the first rows; any extra page rows become guides-only. */
-const DEFAULT_PATTERN = ["solid", "faded", "dotted", "faded-dots", "guides"];
+const DEFAULT_PATTERN = ["solid", "faded", "dotted", "faded-dots", "cursive", "faded-cursive"];
 
 function defaultStyleForIndex(index) {
   return DEFAULT_PATTERN[index] ?? "guides";
@@ -102,7 +94,6 @@ function getState() {
   const words = pageWords.length ? pageWords : [""];
   return {
     words,
-    script: selectedValue("script") || "manuscript",
     pattern,
     page: selectedValue("page") || "a4",
     size: Number(els.size?.value || 48),
@@ -110,22 +101,16 @@ function getState() {
   };
 }
 
-function scriptFontFamily(state) {
-  const script = SCRIPTS[state.script] || SCRIPTS.manuscript;
-  return script.family;
-}
-
-function fontFamilyForStyle(state, styleKey) {
+function fontFamilyForStyle(_state, styleKey) {
   if (DOTTED_STYLES.has(styleKey)) return DOTTED_FAMILY;
-  return scriptFontFamily(state);
+  if (CURSIVE_STYLES.has(styleKey)) return CURSIVE_FAMILY;
+  return MANUSCRIPT_FAMILY;
 }
 
 function pageShellClass(state) {
-  const script = SCRIPTS[state.script] || SCRIPTS.manuscript;
   return [
     "worksheet-page",
     state.page === "letter" ? "page-letter" : "page-a4",
-    script.className,
     state.guides ? "show-guides" : "",
   ]
     .filter(Boolean)
@@ -384,9 +369,12 @@ function fillPage(pageEl, linesEl, subtitleEl, state, baseMetrics, rawWord, rowC
 
 async function ensureScriptFont(state) {
   if (!document.fonts?.load) return;
-  const families = new Set([scriptFontFamily(state)]);
+  const families = new Set([MANUSCRIPT_FAMILY]);
   if (state.pattern.some((key) => DOTTED_STYLES.has(key))) {
     families.add(DOTTED_FAMILY);
+  }
+  if (state.pattern.some((key) => CURSIVE_STYLES.has(key))) {
+    families.add(CURSIVE_FAMILY);
   }
   try {
     await Promise.all([...families].map((family) => document.fonts.load(`${state.size}px ${family}`)));
@@ -541,8 +529,8 @@ async function render() {
   state = getState();
   if (els.sizeValue) els.sizeValue.textContent = String(state.size);
 
-  // Guide geometry stays on the script face so mixed styles share one staff height.
-  const metrics = measureGuideMetrics(scriptFontFamily(state), state.size);
+  // Guide geometry stays on the manuscript face so mixed styles share one staff height.
+  const metrics = measureGuideMetrics(MANUSCRIPT_FAMILY, state.size);
 
   els.pages.replaceChildren();
 
@@ -589,7 +577,7 @@ function bind() {
   els.size?.addEventListener("input", rerender);
   els.guides?.addEventListener("change", rerender);
 
-  document.querySelectorAll('input[name="script"], input[name="page"]').forEach((input) => {
+  document.querySelectorAll('input[name="page"]').forEach((input) => {
     input.addEventListener("change", rerender);
   });
 
@@ -626,4 +614,4 @@ renderPagesEditor();
 bind();
 render();
 
-export { SCRIPTS, STYLES };
+export { STYLES, MANUSCRIPT_FAMILY, CURSIVE_FAMILY, DOTTED_FAMILY };

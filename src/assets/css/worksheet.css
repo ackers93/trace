@@ -139,20 +139,41 @@
   overflow: visible;
   letter-spacing: 0.04em;
   color: var(--ws-ink);
-}
-
-.script-manuscript .worksheet-word,
-.script-manuscript .worksheet-word__svg text {
   font-family: var(--font-manuscript);
 }
 
-.script-cursive .worksheet-word,
-.script-cursive .worksheet-word__svg text {
+.worksheet-word__svg {
+  display: block;
+  width: 100%;
+  height: var(--ws-row-height);
+  overflow: visible;
+}
+
+.worksheet-word__svg text {
+  font-family: var(--font-manuscript);
+  dominant-baseline: alphabetic;
+}
+
+/* Cursive — per-line styles (Dancing Script) */
+.worksheet-row.style-cursive .worksheet-word,
+.worksheet-row.style-cursive .worksheet-word__svg text,
+.worksheet-row.style-faded-cursive .worksheet-word,
+.worksheet-row.style-faded-cursive .worksheet-word__svg text {
   font-family: var(--font-cursive);
   letter-spacing: 0.02em;
 }
 
-/* Dotted — real dotted glyphs (manuscript face; cursive has no dotted companion) */
+.worksheet-row.style-cursive .worksheet-word__svg text {
+  fill: var(--ws-ink);
+  stroke: none;
+}
+
+.worksheet-row.style-faded-cursive .worksheet-word__svg text {
+  fill: var(--ws-faded);
+  stroke: none;
+}
+
+/* Dotted — real dotted glyphs (manuscript face; no cursive dotted companion) */
 .worksheet-row.style-dotted .worksheet-word,
 .worksheet-row.style-dotted .worksheet-word__svg text,
 .worksheet-row.style-faded-dots .worksheet-word,
@@ -169,17 +190,6 @@
 .worksheet-row.style-faded-dots .worksheet-word__svg text {
   fill: var(--ws-faded);
   stroke: none;
-}
-
-.worksheet-word__svg {
-  display: block;
-  width: 100%;
-  height: var(--ws-row-height);
-  overflow: visible;
-}
-
-.worksheet-word__svg text {
-  dominant-baseline: alphabetic;
 }
 
 /* Solid */
