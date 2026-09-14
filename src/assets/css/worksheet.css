@@ -11,11 +11,19 @@
   --ws-ink: #1c2a33;
   --ws-faded: #b7c0c6;
   --ws-stroke: 0.035em;
-  --ws-dot: 0.07em;
   --ws-page-pad: 0.5in;
   --font-manuscript: "Comic Neue", "Comic Sans MS", cursive;
   --font-cursive: "Dancing Script", "Segoe Script", "Brush Script MT", cursive;
+  /* Dotted glyphs are manuscript-only; no cursive dotted face. */
   --font-dotted: "Edu AU VIC WA NT Dots", "Comic Neue", "Comic Sans MS", cursive;
+}
+
+@font-face {
+  font-family: "Edu AU VIC WA NT Dots";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/EduDots.woff2") format("woff2");
 }
 
 .worksheet-page {
@@ -144,7 +152,7 @@
   letter-spacing: 0.02em;
 }
 
-/* Dotted — real dotted glyphs from Edu AU VIC WA NT Dots */
+/* Dotted — real dotted glyphs (manuscript face; cursive has no dotted companion) */
 .worksheet-row.style-dotted .worksheet-word,
 .worksheet-row.style-dotted .worksheet-word__svg text,
 .worksheet-row.style-faded-dots .worksheet-word,

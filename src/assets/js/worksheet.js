@@ -16,7 +16,7 @@ const SCRIPTS = {
   },
 };
 
-/** Purpose-built dotted tracing face (Google Fonts, OFL). */
+/** Real dotted glyph face (manuscript). Cursive has no dotted companion. */
 const DOTTED_FAMILY = '"Edu AU VIC WA NT Dots", "Comic Neue", "Comic Sans MS", cursive';
 
 const STYLES = {
