@@ -13,9 +13,9 @@
   --ws-stroke: 0.035em;
   --ws-dot: 0.07em;
   --ws-page-pad: 0.5in;
-  --font-manuscript: "Edu AU VIC WA NT Hand", "Segoe Print", "Comic Sans MS", cursive;
+  --font-manuscript: "Comic Neue", "Comic Sans MS", cursive;
   --font-cursive: "Dancing Script", "Segoe Script", "Brush Script MT", cursive;
-  --font-dotted: "Edu AU VIC WA NT Dots", "Edu AU VIC WA NT Hand", cursive;
+  --font-dotted: "Edu AU VIC WA NT Dots", "Comic Neue", "Comic Sans MS", cursive;
 }
 
 .worksheet-page {

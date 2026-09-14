@@ -6,7 +6,7 @@
 const SCRIPTS = {
   manuscript: {
     label: "Manuscript",
-    family: '"Edu AU VIC WA NT Hand", "Segoe Print", "Comic Sans MS", cursive',
+    family: '"Comic Neue", "Comic Sans MS", cursive',
     className: "script-manuscript",
   },
   cursive: {
@@ -17,7 +17,7 @@ const SCRIPTS = {
 };
 
 /** Purpose-built dotted tracing face (Google Fonts, OFL). */
-const DOTTED_FAMILY = '"Edu AU VIC WA NT Dots", "Edu AU VIC WA NT Hand", cursive';
+const DOTTED_FAMILY = '"Edu AU VIC WA NT Dots", "Comic Neue", "Comic Sans MS", cursive';
 
 const STYLES = {
   solid: { label: "Solid", className: "style-solid" },
